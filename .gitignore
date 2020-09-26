@@ -1,0 +1,9 @@
+.DS_Store
+xcschememanagement.plist
+Pods
+LibsCache
+.xcworkspacedata
+WeatherForecast.xcworkspace
+WeatherForecast.xcodeproj/project.xcworkspace/xcshareddata
+UserInterfaceState.xcuserstate
+xcuserdata/
