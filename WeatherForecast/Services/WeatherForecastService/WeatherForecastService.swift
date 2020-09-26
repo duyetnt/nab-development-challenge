@@ -52,10 +52,10 @@ enum WeatherForecastAPIService: TargetType {
 
 // MARK: - Service
 protocol WeatherForecastService {
-  func fetchForecastInfo(city: String, numberOfDays: Int, degreeUnit: DegreeUnit) -> Single<WeatherForecastResponse>
+  func fetchDailyForecast(city: String, numberOfDays: Int, degreeUnit: DegreeUnit) -> Single<WeatherForecastResponse>
 }
 
-final class DefaultWeatherForecastService {
+final class DefaultWeatherForecastService: WeatherForecastService {
   private let provider = MoyaProvider<WeatherForecastAPIService>()
   private let appID: String
 
@@ -63,7 +63,7 @@ final class DefaultWeatherForecastService {
     self.appID = appID
   }
 
-  func fetchForecastInfo(city: String, numberOfDays: Int, degreeUnit: DegreeUnit) -> Single<WeatherForecastResponse> {
+  func fetchDailyForecast(city: String, numberOfDays: Int, degreeUnit: DegreeUnit) -> Single<WeatherForecastResponse> {
     let parameters = WeatherForecastParameters(
       city: city,
       numberOfDays: numberOfDays,

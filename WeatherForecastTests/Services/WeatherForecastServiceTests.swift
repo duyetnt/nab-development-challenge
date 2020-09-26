@@ -33,7 +33,7 @@ final class TravellersServiceTests: QuickSpec {
           beforeEach {
             result = nil
             self.stubFetchDailyForecast(isSuccess: isSuccess)
-            result = try? self.sut.fetchForecastInfo(city: self.city, numberOfDays: self.numberOfDays, degreeUnit: self.unit)
+            result = try? self.sut.fetchDailyForecast(city: self.city, numberOfDays: self.numberOfDays, degreeUnit: self.unit)
               .toBlocking(timeout: 1)
               .single()
           }
@@ -78,7 +78,7 @@ final class TravellersServiceTests: QuickSpec {
   )
 
   private let response: WeatherForecastResponse = {
-    let item = WeatherForecastResponse.WeatherForecastItem(
+    let item = WeatherForecastResponse.WeatherDay(
       date: Date(),
       pressure: 1000,
       humidity: 50,

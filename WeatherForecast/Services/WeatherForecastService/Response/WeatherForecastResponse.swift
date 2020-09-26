@@ -9,7 +9,7 @@
 import Foundation
 
 struct WeatherForecastResponse: Codable, Equatable {
-  struct WeatherForecastItem: Codable, Equatable {
+  struct WeatherDay: Codable, Equatable {
     struct Temperature: Codable, Equatable {
       enum CodingKeys: String, CodingKey {
         case minimum = "min"
@@ -55,5 +55,5 @@ struct WeatherForecastResponse: Codable, Equatable {
     case items = "list"
   }
 
-  var items: [WeatherForecastItem]
+  let items: [WeatherDay]
 }
