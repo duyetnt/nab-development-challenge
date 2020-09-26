@@ -111,7 +111,7 @@ final class DefaultMainViewModel: MainViewModel {
         return stream
           .map { $0.items }
           .do(onSuccess: { items in
-            let uiModels = items.map(uiModelConverter.convert(from:))
+            let uiModels = items.map(uiModelConverter.convert)
             itemsRelay.accept(uiModels)
           }, onError: { error in
             NSLog("### fail to fetch daily forecast. \(error)")

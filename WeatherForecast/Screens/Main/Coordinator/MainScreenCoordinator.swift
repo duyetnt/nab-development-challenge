@@ -18,7 +18,9 @@ final class MainScreenCoordinator: BaseCoordinator {
   }
 
   override func start() {
-    let viewController = MainViewController()
+    let service = WeatherForecastSeviceFactory.makeService(appID: appID)
+    let viewModel = DefaultMainViewModel(service: service)
+    let viewController = MainViewController(viewModel: viewModel)
     window.rootViewController = UINavigationController(rootViewController: viewController)
     window.makeKeyAndVisible()
   }

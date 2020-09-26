@@ -19,10 +19,10 @@ class BaseCoordinator: Coordinator {
   }
 
   func addChildCoordinator(_ coordinator: Coordinator) {
-    childCoordinators[coordinator.idenfitier] = coordinator
+    childCoordinators[type(of: coordinator).idenfitier] = coordinator
   }
 
   func removeChildCoordinator(_ coordinator: Coordinator) {
-    childCoordinators[coordinator.idenfitier] = nil
+    childCoordinators[type(of: coordinator).idenfitier] = nil
   }
 }

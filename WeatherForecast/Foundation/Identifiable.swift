@@ -6,10 +6,16 @@
 //  Copyright © 2020 Duyet Nguyen. All rights reserved.
 //
 
-protocol Identifiable {}
+import UIKit
+
+protocol Identifiable {
+  static var idenfitier: String { get }
+}
 
 extension Identifiable {
-  var idenfitier: String {
+  static var idenfitier: String {
     return String(reflecting: self)
   }
 }
+
+extension UITableViewCell: Identifiable {}
