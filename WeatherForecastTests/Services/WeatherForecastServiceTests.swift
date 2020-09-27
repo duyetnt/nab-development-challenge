@@ -12,7 +12,7 @@ import RxBlocking
 @testable import NetworkStubber
 @testable import WeatherForecast
 
-final class TravellersServiceTests: QuickSpec {
+final class WeatherForecastServiceTests: QuickSpec {
 
   override func spec() {
     super.spec()

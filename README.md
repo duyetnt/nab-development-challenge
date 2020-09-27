@@ -31,9 +31,12 @@ Below is the list of third-party libraris that I use in the project:
 - **SnapKit**: To write auto-layout code easier.
 - **Quick/Nimble**: Those libraries are very famous in Behavior Driven Testing approach, which provide an powerful syntax to write English-friendly tests.
 - **OHHTTPStubs/Swift**: To intercept network requests and return the mock data in tests.
+- **Shock**: A HTTP mocking frameword to set up mock data in UI test (https://tech.just-eat.com/2019/03/05/shock-better-automation-testing-for-ios/)
 
 ## 4. Build project on local
 After cloning the repo, please run `pod install` from your terminal then open `WeatherForecast.xcworkspace` and try to build the project using `Xcode 11.3.1`. It should work without any additional steps.
+
+When running UI test, please make sure the hardware keyboard is disconnected (Simulator --> Hardware --> Keyboard --> Toggle off **Connect Hardware Keyboard**).
 
 ## 5. Checklist
 - [x] Programming language: Swift
@@ -44,7 +47,7 @@ After cloning the repo, please run `pod install` from your terminal then open `W
 
 - [x] Unit tests
 
-- [ ] Acceptance tests
+- [x] Acceptance tests
 
 - [x] Exception handling
 

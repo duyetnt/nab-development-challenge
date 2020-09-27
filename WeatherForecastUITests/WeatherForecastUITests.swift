@@ -7,37 +7,121 @@
 //
 
 import XCTest
+import Shock
+@testable import AccessIDs
+@testable import WeatherForecast
 
-class WeatherForecastUITests: XCTestCase {
+final class WeatherForecastUITests: XCTestCase {
 
-    override func setUp() {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+  private var mockServer: MockServer!
+  private let timeout = TimeInterval(2)
+  private let urlPath = "/forecast/daily"
 
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
+  override func setUp() {
+    super.setUp()
 
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
+    // In UI tests it is usually best to stop immediately when a failure occurs.
+    continueAfterFailure = false
 
-    override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+    mockServer = MockServer(port: 6789, bundle: Bundle(for: type(of: self)))
+    mockServer.start()
+  }
 
-    func testExample() {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
-        app.launch()
+  override func tearDown() {
+    mockServer.stop()
+    super.tearDown()
+  }
 
-        // Use recording to get started writing UI tests.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
+  func testMainScreen() {
+    // UI tests must launch the application that they test.
+    let app = XCUIApplication()
+    app.launch()
 
-    func testLaunchPerformance() {
-        if #available(macOS 10.15, iOS 13.0, tvOS 13.0, *) {
-            // This measures how long it takes to launch your application.
-            measure(metrics: [XCTOSSignpostMetric.applicationLaunch]) {
-                XCUIApplication().launch()
-            }
-        }
-    }
+    let navigationTitle = app.navigationBars.staticTexts["Weather Forecast"]
+    expectToSee(navigationTitle)
+
+    let searchBar = app.navigationBars.searchFields.firstMatch
+    expectToSee(searchBar)
+    XCTAssertEqual(searchBar.placeholderValue, "Enter a place")
+
+    let tableView = app.tables[MainAccessID.tableView.id]
+    expectToSee(tableView)
+
+    searchBar.tap()
+    searchBar.typeText("aa")
+    // search text only has 2 characters, shouldn't fire API request
+    expectNotToSee(tableView.tableRows.firstMatch)
+
+    // server error case
+    var message = "This is a message from Backend."
+    let serverErrorRoute = MockHTTPRoute.simple(
+      method: .get,
+      urlPath: urlPath,
+      code: 404,
+      filename: "server_error.json"
+    )
+    mockServer.setup(route: serverErrorRoute)
+
+    searchBar.typeText("ab")
+
+    var errorAlert = app.alerts.firstMatch
+    var errorMessage = errorAlert.staticTexts[message]
+    expectToSee(errorMessage)
+
+    var okButton = errorAlert.buttons.firstMatch
+    okButton.tap()
+
+    // timeout
+    let timeoutRoute = MockHTTPRoute.timeout(method: .get, urlPath: urlPath, timeoutInSeconds: 1)
+    mockServer.setup(route: timeoutRoute)
+
+    searchBar.tap()
+    searchBar.typeText("c")
+
+    let loadingView = app.otherElements[MainAccessID.loadingView.id]
+    expectToSee(loadingView)
+
+    sleep(2)
+    expectNotToSee(loadingView)
+
+    message = "Something went wrong. Please try searching with another city!"
+    errorAlert = app.alerts.firstMatch
+    errorMessage = errorAlert.staticTexts[message]
+    expectToSee(errorMessage)
+
+    okButton = errorAlert.buttons.firstMatch
+    okButton.tap()
+
+    // success
+    let successRoute = MockHTTPRoute.simple(
+      method: .get,
+      urlPath: urlPath,
+      code: 200,
+      filename: "success.json"
+    )
+    mockServer.setup(route: successRoute)
+
+    searchBar.tap()
+    searchBar.typeText("d")
+
+    let cell = tableView.cells.firstMatch
+    expectToSee(cell)
+
+    let texts = [
+      "Date: Sun, 27 Sep 2020",
+      "Average temperature: 15°C",
+      "Pressure: 1011",
+      "Humidity: 67%",
+      "Description: overcast clouds"
+    ]
+    texts.forEach { text in expectToSee(cell.staticTexts[text]) }
+  }
+
+  private func expectToSee(_ element: XCUIElement, _ file: StaticString = #file, _ line: UInt = #line) {
+    XCTAssertTrue(element.waitForExistence(timeout: timeout), file: file, line: line)
+  }
+
+  private func expectNotToSee(_ element: XCUIElement, _ file: StaticString = #file, _ line: UInt = #line) {
+    XCTAssertFalse(element.waitForExistence(timeout: timeout), file: file, line: line)
+  }
 }

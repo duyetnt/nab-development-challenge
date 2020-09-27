@@ -8,12 +8,14 @@
 
 import UIKit
 import RxSwift
+import AccessIDs
 
 final class MainViewController: UIViewController {
 
   private let searchController = UISearchController(searchResultsController: nil).configure { searchController in
     searchController.hidesNavigationBarDuringPresentation = false
     searchController.obscuresBackgroundDuringPresentation = false
+    searchController.searchBar.placeholder = "Enter a place"
   }
 
   private let tableView = UITableView().configure { tableView in
@@ -21,9 +23,11 @@ final class MainViewController: UIViewController {
     tableView.estimatedRowHeight = 100
     tableView.rowHeight = UITableView.automaticDimension
     tableView.allowsSelection = false
+    tableView.setAccessID(MainAccessID.tableView)
   }
 
   private lazy var loadingIncidatorView = UIView(frame: view.bounds).configure { loadingView in
+    loadingView.setAccessID(MainAccessID.loadingView)
     loadingView.isHidden = true
     loadingView.backgroundColor = UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 0.5)
     let indicator = UIActivityIndicatorView(style: .whiteLarge)

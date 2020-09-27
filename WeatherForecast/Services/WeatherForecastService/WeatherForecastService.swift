@@ -13,12 +13,12 @@ enum WeatherForecastAPIService: TargetType {
   case dailyForecast(WeatherForecastParameters)
 
   var baseURL: URL {
-    return URL(string: "https://api.openweathermap.org/data/2.5/forecast")!
+    return URL(string: Endpoint.current)!
   }
 
   var path: String {
     switch self {
-    case .dailyForecast: return "/daily"
+    case .dailyForecast: return "/forecast/daily"
     }
   }
 
@@ -56,7 +56,7 @@ protocol WeatherForecastService {
 }
 
 final class DefaultWeatherForecastService: WeatherForecastService {
-  private let provider = MoyaProvider<WeatherForecastAPIService>()
+  private let provider = MoyaProvider<WeatherForecastAPIService>(plugins: [NetworkLoggerPlugin()])
   private let appID: String
 
   init(appID: String) {
