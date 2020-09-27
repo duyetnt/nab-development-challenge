@@ -127,17 +127,15 @@ final class MainViewModelTests: QuickSpec {
     describe("loading") {
       let city1 = "aaa"
       let city2 = "aaaaa"
-      let latency = RxTimeInterval.seconds(2)
 
       var isLoadingObserver: TestableObserver<Bool>!
       beforeEach {
         isLoadingObserver = self.scheduler.observe(self.sut.output.isLoadingStream)
 
         self.service.stubbedResult = Single<WeatherForecastResponse>.error(TestError.random)
-          .delay(latency, scheduler: self.scheduler)
         self.scheduler.scheduleAt(10) {
-          self.service.stubbedResult = Single<WeatherForecastResponse>.just(self.response)
-            .delay(latency, scheduler: self.scheduler)
+          self.service.stubbedResult = Single<Int>.timer(RxTimeInterval.seconds(2), scheduler: self.scheduler)
+            .map { _ in self.response }
         }
 
         self.updateQueryString(
@@ -146,10 +144,10 @@ final class MainViewModelTests: QuickSpec {
         )
 
         self.scheduler.start()
+      }
 
-        it("should update isLoadingStream correctly") {
-          expect(isLoadingObserver.events) == [.next(6, true), .next(8, false), .next(16, true), .next(18, true)]
-        }
+      it("should update isLoadingStream correctly") {
+        expect(isLoadingObserver.events) == [.next(6, true), .next(6, false), .next(16, true), .next(18, false)]
       }
     }
   }
