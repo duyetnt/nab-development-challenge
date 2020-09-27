@@ -71,6 +71,18 @@ final class DefaultWeatherForecastService: WeatherForecastService {
       degreeUnit: degreeUnit
     )
     return provider.rx.request(.dailyForecast(parameters))
-      .map(WeatherForecastResponse.self)
+      .map { response in
+        do {
+          let successResponse = try response.filterSuccessfulStatusCodes()
+          do {
+            return try successResponse.map(WeatherForecastResponse.self)
+          }
+          catch {
+            throw error
+          }
+        } catch {
+          throw try response.map(WeatherForecastError.self)
+        }
+      }
   }
 }

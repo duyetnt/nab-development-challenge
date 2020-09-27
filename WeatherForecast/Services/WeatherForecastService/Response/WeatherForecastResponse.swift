@@ -79,3 +79,7 @@ struct WeatherForecastResponse: Codable, Equatable {
 
   let items: [WeatherDay]
 }
+
+struct WeatherForecastError: Error, Codable {
+  let message: String
+}

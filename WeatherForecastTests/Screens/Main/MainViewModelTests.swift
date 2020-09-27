@@ -23,6 +23,7 @@ final class MainViewModelTests: QuickSpec {
 
     specOfQueryString()
     specOfFetchData()
+    specOfLoading()
   }
 
   private func specOfQueryString() {
@@ -35,14 +36,18 @@ final class MainViewModelTests: QuickSpec {
 
       beforeEach {
         self.initialSetup(minQueryLength: minQueryLength)
+
         fetchDailyForecastObserver = self.scheduler.observe(self.service.didFetchDailyForecast)
+
         self.updateQueryString(
           (text: "a", at: 1), // invalid characters count, will ignore
           (text: "aaa", at: 2),
           (text: validString1, at: 5), // valid, will fire API
           (text: validString2, at: 9), // will be ignored by debounce
-          (text: validString3, at: 10) // valid, will fire API
+          (text: validString3, at: 10), // valid, will fire API
+          (text: validString3, at: 15) // duplicate query string, will by ignored by distinctUntilChanged
         )
+
         self.scheduler.start()
       }
 
@@ -61,6 +66,9 @@ final class MainViewModelTests: QuickSpec {
         context("unit is \(String(describing: unit))") {
           let city1 = "aaa"
           let city2 = "aaaaa"
+          let city3 = "aaaaaaa"
+          let serverError = WeatherForecastError(message: "City not found!")
+
           var fetchDailyForecastObserver: TestableObserver<FetchDailyForecastParameters>!
           var errorObserver: TestableObserver<String>!
           var uiModelsObserver: TestableObserver<[WeatherForecastUIModel]>!
@@ -75,23 +83,31 @@ final class MainViewModelTests: QuickSpec {
             self.scheduler.scheduleAt(10) {
               self.service.stubbedResult = .just(self.response)
             }
+            self.scheduler.scheduleAt(20) {
+              self.service.stubbedResult = .error(serverError)
+            }
+
             self.updateQueryString(
               (text: city1, at: 5), // should show error
-              (text: city2, at: 15) // should update UI models
+              (text: city2, at: 15), // should update UI models
+              (text: city3, at: 25) // should show server error with message given by BE
             )
+
             self.scheduler.start()
           }
 
           it("should call service to fetch data") {
             expect(fetchDailyForecastObserver.events) == [
               .next(6, .init(city: city1, numberOfDays: self.numberOfDays, unit: unit)),
-              .next(16, .init(city: city2, numberOfDays: self.numberOfDays, unit: unit))
+              .next(16, .init(city: city2, numberOfDays: self.numberOfDays, unit: unit)),
+              .next(26, .init(city: city3, numberOfDays: self.numberOfDays, unit: unit))
             ]
           }
 
           it("should update error and response accordingly") {
             expect(errorObserver.events) == [
-              .next(6, "Something went wrong. Please try searching with another city!")
+              .next(6, "Something went wrong. Please try searching with another city!"),
+              .next(26, serverError.message)
             ]
 
             let uiModel: WeatherForecastUIModel
@@ -100,8 +116,39 @@ final class MainViewModelTests: QuickSpec {
             case .metric: uiModel = self.metricUIModel
             case .imperial: uiModel = self.imperialUIModel
             }
-            expect(uiModelsObserver.events) == [.next(0, []), .next(16, [uiModel])]
+            expect(uiModelsObserver.events) == [.next(0, []), .next(6, []), .next(16, [uiModel]), .next(26, [])]
           }
+        }
+      }
+    }
+  }
+
+  private func specOfLoading() {
+    describe("loading") {
+      let city1 = "aaa"
+      let city2 = "aaaaa"
+      let latency = RxTimeInterval.seconds(2)
+
+      var isLoadingObserver: TestableObserver<Bool>!
+      beforeEach {
+        isLoadingObserver = self.scheduler.observe(self.sut.output.isLoadingStream)
+
+        self.service.stubbedResult = Single<WeatherForecastResponse>.error(TestError.random)
+          .delay(latency, scheduler: self.scheduler)
+        self.scheduler.scheduleAt(10) {
+          self.service.stubbedResult = Single<WeatherForecastResponse>.just(self.response)
+            .delay(latency, scheduler: self.scheduler)
+        }
+
+        self.updateQueryString(
+          (text: city1, at: 5), // should show error
+          (text: city2, at: 15) // should update UI models
+        )
+
+        self.scheduler.start()
+
+        it("should update isLoadingStream correctly") {
+          expect(isLoadingObserver.events) == [.next(6, true), .next(8, false), .next(16, true), .next(18, true)]
         }
       }
     }

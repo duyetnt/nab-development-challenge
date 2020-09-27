@@ -58,6 +58,7 @@ struct MainViewModelInput {
 struct MainViewModelOutput {
   let itemsStream: Observable<[WeatherForecastUIModel]>
   let errorStream: Observable<String>
+  let isLoadingStream: Observable<Bool>
 }
 
 protocol MainViewModel {
@@ -67,7 +68,7 @@ protocol MainViewModel {
 
 final class DefaultMainViewModel: MainViewModel {
   enum Constants {
-    static let queryStringDebounceInterval = RxTimeInterval.microseconds(500)
+    static let queryStringDebounceInterval = RxTimeInterval.milliseconds(500)
     static let dateFormat = "E, dd MMM yyyy"
   }
 
@@ -98,28 +99,40 @@ final class DefaultMainViewModel: MainViewModel {
 
     let itemsRelay = BehaviorRelay<[WeatherForecastUIModel]>(value: [])
     let errorPublish = PublishSubject<String>()
+    let isLoadingPublish = PublishSubject<Bool>()
     output = MainViewModelOutput(
       itemsStream: itemsRelay.asObservable(),
-      errorStream: errorPublish
+      errorStream: errorPublish,
+      isLoadingStream: isLoadingPublish
     )
 
     let uiModelConverter = UIModelConverter(dateFormat: Constants.dateFormat, unit: unit)
-    queryStringPublish.filter { $0.count >= minQueryLength }
+    queryStringPublish.distinctUntilChanged()
+      .filter { $0.count >= minQueryLength }
       .debounce(Constants.queryStringDebounceInterval, scheduler: scheduler)
       .flatMapLatest { city -> Single<[WeatherForecastResponse.WeatherDay]> in
         let stream = service.fetchDailyForecast(city: city, numberOfDays: numberOfDays, degreeUnit: unit)
         return stream
           .map { $0.items }
-          .do(onSuccess: { items in
-            let uiModels = items.map(uiModelConverter.convert)
-            itemsRelay.accept(uiModels)
+          .do(onSuccess: { _ in
+            isLoadingPublish.onNext(false)
           }, onError: { error in
-            NSLog("### fail to fetch daily forecast. \(error)")
-            errorPublish.onNext("Something went wrong. Please try searching with another city!")
+            NSLog("MainViewModel. Fail to fetch daily forecast. Error: \(error)")
+            isLoadingPublish.onNext(false)
+            if let error = error as? WeatherForecastError {
+              errorPublish.onNext(error.message)
+            } else {
+              errorPublish.onNext("Something went wrong. Please try searching with another city!")
+            }
+          }, onSubscribe: {
+            isLoadingPublish.onNext(true)
           })
           .catchErrorJustReturn([])
       }
-      .subscribe()
+      .subscribe(onNext: { items in
+        let uiModels = items.map(uiModelConverter.convert)
+        itemsRelay.accept(uiModels)
+      })
       .disposed(by: disposeBag)
   }
 }

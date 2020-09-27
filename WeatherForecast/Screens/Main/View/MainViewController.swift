@@ -11,12 +11,25 @@ import RxSwift
 
 final class MainViewController: UIViewController {
 
+  private let searchController = UISearchController(searchResultsController: nil).configure { searchController in
+    searchController.hidesNavigationBarDuringPresentation = false
+    searchController.obscuresBackgroundDuringPresentation = false
+  }
+
   private let tableView = UITableView().configure { tableView in
     tableView.register(WeatherItemCell.classForCoder(), forCellReuseIdentifier: WeatherItemCell.idenfitier)
     tableView.estimatedRowHeight = 100
     tableView.rowHeight = UITableView.automaticDimension
     tableView.allowsSelection = false
-    tableView.backgroundColor = .lightGray
+  }
+
+  private lazy var loadingIncidatorView = UIView(frame: view.bounds).configure { loadingView in
+    loadingView.isHidden = true
+    loadingView.backgroundColor = UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 0.5)
+    let indicator = UIActivityIndicatorView(style: .whiteLarge)
+    loadingView.addSubview(indicator)
+    indicator.center = view.center
+    indicator.startAnimating()
   }
 
   private let viewModel: MainViewModel
@@ -42,7 +55,18 @@ final class MainViewController: UIViewController {
   }
 
   private func setUpViews() {
-    view.addSubview(tableView)
+    title = "Weather Forecast"
+
+    view.backgroundColor = .white
+    view.addSubviews(tableView, loadingIncidatorView)
+
+    if #available(iOS 11.0, *) {
+      navigationItem.hidesSearchBarWhenScrolling = false
+      navigationItem.searchController = searchController
+    } else {
+      tableView.tableHeaderView = searchController.searchBar
+    }
+    definesPresentationContext = true
 
     tableView.dataSource = self
   }
@@ -54,20 +78,46 @@ final class MainViewController: UIViewController {
   }
 
   private func setUpBinding() {
+    // output
     viewModel.output.itemsStream
       .subscribe(onNext: { [weak self] items in
         self?.reload(with: items)
       })
       .disposed(by: disposeBag)
 
-    // TODO (Duyet): Add search box & bind to query string
-    viewModel.input.queryStringStream.onNext("saigon")
+    viewModel.output.errorStream
+      .subscribe(onNext: { [weak self] errorMessage in
+        self?.displayErrorMessage(errorMessage)
+      })
+      .disposed(by: disposeBag)
+
+    viewModel.output.isLoadingStream
+      .map { !$0 }
+      .bind(to: loadingIncidatorView.rx.isHidden)
+      .disposed(by: disposeBag)
+
+    // input
+    searchController.searchBar.rx.text
+      .map { $0 ?? "" }
+      .bind(to: viewModel.input.queryStringStream)
+      .disposed(by: disposeBag)
   }
 
   private func reload(with items: [WeatherForecastUIModel]) {
     self.items = items
     tableView.reloadData()
   }
+
+  private func displayErrorMessage(_ message: String) {
+    let alertController = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+    alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+    present(alertController, animated: true)
+  }
+}
+
+// MARK: - UISearchResultUpdating
+extension MainViewController: UISearchResultsUpdating {
+  func updateSearchResults(for searchController: UISearchController) { }
 }
 
 // MARK: - UITableViewDataSource

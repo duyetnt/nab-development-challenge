@@ -38,7 +38,6 @@ final class WeatherItemCell: UITableViewCell {
   }
 
   private func setUpViews() {
-    contentView.backgroundColor = .lightGray
     contentView.addSubview(stackView)
     stackView.addArrangedSubviews(dateLabel, temperatureLabel, pressureLabel, humidityLabel, descriptionLabel)
   }
